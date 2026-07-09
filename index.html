@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bíblia de Estudo</title>
+<style>
+  :root{
+    --bg: #0b1220;
+    --bg-2: #101a30;
+    --panel: #111c33;
+    --line: #223055;
+    --amber: #f5b962;
+    --amber-deep: #d98f34;
+    --text: #eef2fb;
+    --muted: #8a95b8;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{-webkit-tap-highlight-color:transparent;}
+  body{
+    background: radial-gradient(ellipse at 50% -10%, #17233f 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    padding: 22px 16px 90px;
+    max-width: 720px;
+    margin: 0 auto;
+    min-height:100vh;
+  }
+  .titulo-serif{
+    font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+  }
+
+  /* ---------- Cabeçalho / lâmpada ---------- */
+  header{ text-align:center; margin-bottom: 22px; }
+  header h1{
+    font-family: Georgia, "Iowan Old Style", serif;
+    font-size: 26px;
+    font-weight:700;
+    letter-spacing:0.3px;
+  }
+  header p.sub{
+    color: var(--muted);
+    font-size: 12.5px;
+    font-style: italic;
+    margin-top:4px;
+    letter-spacing:0.2px;
+  }
+
+  .lampada-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin: 22px 0 18px;
+  }
+  #svgBiblia{ width:92px; height:92px; overflow:visible; }
+  .respirar{
+    animation: respirar 3.4s ease-in-out infinite;
+  }
+  @keyframes respirar{
+    0%,100%{ opacity: var(--halo-min, 0.15); }
+    50%{ opacity: var(--halo-max, 0.4); }
+  }
+  @media (prefers-reduced-motion: reduce){ .respirar{ animation:none; } }
+
+  .progresso-num{
+    font-family: Georgia, serif;
+    font-size: 30px;
+    font-weight:700;
+    margin-top: 6px;
+    color: var(--amber);
+    text-shadow: 0 0 18px rgba(245,185,98,0.35);
+  }
+  .progresso-label{
+    font-size: 12px;
+    color: var(--muted);
+    margin-top:2px;
+  }
+  .subprogresso{
+    display:flex;
+    gap: 22px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .subprogresso b{ color: var(--text); }
+
+  /* ---------- Continuar leitura ---------- */
+  #continuar{
+    display:none;
+    background: linear-gradient(135deg, rgba(245,185,98,0.10), rgba(245,185,98,0.02));
+    border: 1px solid rgba(245,185,98,0.25);
+    border-radius: 14px;
+    padding: 13px 16px;
+    margin-bottom: 18px;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  #continuar.ativo{ display:flex; }
+  #continuar .info{ font-size:13px; }
+  #continuar .info small{ display:block; color:var(--muted); font-size:11px; margin-top:2px; }
+  #continuar a{
+    background: var(--amber);
+    color: #201200;
+    font-weight:700;
+    font-size:12.5px;
+    text-decoration:none;
+    padding: 9px 14px;
+    border-radius: 9px;
+    white-space:nowrap;
+  }
+
+  /* ---------- Busca ---------- */
+  #busca{
+    width:100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 22px;
+    outline:none;
+  }
+  #busca::placeholder{ color: var(--muted); }
+  #busca:focus{ border-color: var(--amber); }
+
+  h2.secao{
+    font-size: 13px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 20px 0 10px;
+  }
+
+  .grid{
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+  }
+  .book{
+    position:relative;
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 16px 3px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+    border: 1px solid var(--line);
+    transition: transform 0.08s ease, border-color 0.15s ease;
+  }
+  .book:active{ transform: scale(0.94); }
+  .book.lido{
+    background: linear-gradient(160deg, rgba(245,185,98,0.22), rgba(245,185,98,0.06));
+    border-color: rgba(245,185,98,0.5);
+    color: #ffe6b8;
+  }
+  .book.oculto{ display:none; }
+  .book .marca{
+    position:absolute;
+    top:3px; right:4px;
+    width:5px; height:5px;
+    border-radius:50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px rgba(245,185,98,0.8);
+    display:none;
+  }
+  .book.lido .marca{ display:block; }
+
+  /* ---------- Painel inferior (ação rápida) ---------- */
+  #painel{
+    position: fixed; left:0; right:0; bottom:0;
+    background: var(--panel);
+    border-top:1px solid var(--line);
+    padding:16px 18px;
+    display:none;
+    flex-direction:column;
+    gap:12px;
+    max-width:720px;
+    margin:0 auto;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.4);
+  }
+  #painel.ativo{ display:flex; }
+  #painelNome{ font-size:17px; font-weight:700; font-family: Georgia, serif; }
+  #painelLocal{ font-size:12.5px; color: var(--muted); margin-top:2px; }
+  #painelStatus{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    font-weight:600;
+    margin-top:6px;
+    padding:4px 10px;
+    border-radius:20px;
+    width:fit-content;
+  }
+  #painelStatus.concluido{ background: rgba(245,185,98,0.15); color: var(--amber); }
+  #painelStatus.pendente{ background: rgba(138,149,184,0.12); color: var(--muted); }
+  #painelBotoes{ display:flex; gap:8px; }
+  #painel button{
+    flex:1;
+    border:none;
+    border-radius:8px;
+    padding:11px 8px;
+    font-size:12.5px;
+    cursor:pointer;
+    font-weight:600;
+  }
+  #btnNotas{ background: #1c2c4d; color: var(--text); }
+  #btnVersiculo{ background: #1c2c4d; color: var(--text); }
+
+  /* ---------- Overlay / modal genérico ---------- */
+  .overlay{
+    position: fixed; inset:0;
+    background: rgba(4,7,15,0.72);
+    display:none;
+    align-items:flex-end;
+    justify-content:center;
+    z-index:60;
+    backdrop-filter: blur(2px);
+  }
+  .overlay.ativo{ display:flex; }
+  .modal{
+    background: var(--bg-2);
+    width:100%; max-width:720px; max-height:80vh;
+    border-radius:18px 18px 0 0;
+    padding: 18px 18px 26px;
+    overflow-y:auto;
+    border-top: 1px solid var(--line);
+  }
+  .modal-header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .modal-titulo{ font-family:Georgia, serif; font-size:18px; font-weight:700; }
+  .fechar{
+    background:none; border:none; color:var(--muted);
+    font-size:22px; cursor:pointer; line-height:1; padding:4px 8px;
+  }
+  #capGrid{
+    display:grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap:8px;
+  }
+  .cap{
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius:8px;
+    padding:16px 3px;
+    text-align:center;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    user-select:none;
+    text-decoration:none;
+    display:block;
+    transition: transform 0.08s ease, border-color 0.15s ease;
+  }
+  .cap.ultimo{ border-color: var(--amber); color: var(--amber); }
+  .cap:active{ transform: scale(0.94); }
+  .aviso{
+    font-size:11.5px; color:var(--muted); margin-top:16px; line-height:1.5; text-align:center;
+  }
+  #notasTexto{
+    width:100%; min-height:140px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-radius:10px;
+    padding:12px;
+    font-size:14px;
+    font-family: inherit;
+    resize: vertical;
+    outline:none;
+  }
+  #notasTexto:focus{ border-color: var(--amber); }
+  #salvarNota{
+    margin-top:10px;
+    background: var(--amber);
+    color:#201200;
+    border:none;
+    padding:10px 16px;
+    border-radius:9px;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+  }
+
+  footer{
+    text-align:center;
+    margin-top: 34px;
+    font-size:11px;
+    color: var(--muted);
+  }
+  footer button{
+    background:none; border:none; color: var(--muted);
+    text-decoration: underline;
+    font-size:11px; cursor:pointer;
+    margin: 0 6px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📖 Bíblia de Estudo</h1>
+  <p class="sub">"Lâmpada para os meus pés é a tua palavra" — Sal. 119:105</p>
+</header>
+
+<div class="lampada-wrap">
+  <svg id="svgBiblia" viewBox="0 0 100 100">
+    <defs>
+      <radialGradient id="gradGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#f5b962" stop-opacity="0.6"/>
+        <stop offset="100%" stop-color="#f5b962" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="gradPagina" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#fff6e6"/>
+        <stop offset="100%" stop-color="#f5b962"/>
+      </linearGradient>
+    </defs>
+    <circle id="haloBiblia" class="respirar" cx="50" cy="50" r="42" fill="url(#gradGlow)" opacity="0.18"/>
+    <path d="M50 24 C36 17 20 19 11 25 L11 74 C20 68 36 66 50 73 Z" fill="url(#gradPagina)" stroke="#d98f34" stroke-width="1.3"/>
+    <path d="M50 24 C64 17 80 19 89 25 L89 74 C80 68 64 66 50 73 Z" fill="url(#gradPagina)" stroke="#d98f34" stroke-width="1.3"/>
+    <line x1="50" y1="24" x2="50" y2="73" stroke="#c67d2e" stroke-width="1.4"/>
+    <line x1="17" y1="33" x2="41" y2="29" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="17" y1="41" x2="41" y2="37" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="17" y1="49" x2="41" y2="45" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="17" y1="57" x2="41" y2="53" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="59" y1="29" x2="83" y2="33" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="59" y1="37" x2="83" y2="41" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="59" y1="45" x2="83" y2="49" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+    <line x1="59" y1="53" x2="83" y2="57" stroke="#b97a2f" stroke-width="1" opacity="0.55"/>
+  </svg>
+  <div class="progresso-num" id="numProgresso">0</div>
+  <div class="progresso-label">versículos lidos</div>
+  <div class="subprogresso">
+    <span>Hebraicas: <b id="progHeb">0</b></span>
+    <span>Gregas: <b id="progGre">0</b></span>
+  </div>
+</div>
+
+<div id="continuar">
+  <div class="info">
+    Continuar em <span id="continuarNome"></span>
+    <small id="continuarDetalhe"></small>
+  </div>
+  <a id="continuarLink" href="#">Abrir</a>
+</div>
+
+<input id="busca" type="text" placeholder="Buscar livro (ex: Gênesis, Sal, João...)">
+
+<h2 class="secao">Escrituras Hebraico-Aramaicas</h2>
+<div class="grid" id="grid1"></div>
+
+<h2 class="secao">Escrituras Gregas Cristãs</h2>
+<div class="grid" id="grid2"></div>
+
+<footer>
+  Feito por Leandro Rocha
+  <br>
+  <button id="btnExportar">Exportar backup</button> · <button id="btnImportar">Importar backup</button>
+  <input type="file" id="arquivoImportar" accept=".json" style="display:none">
+</footer>
+
+<div id="painel">
+  <div id="painelInfo">
+    <div id="painelNome"></div>
+    <div id="painelLocal"></div>
+    <div id="painelStatus"></div>
+  </div>
+  <div id="painelBotoes">
+    <button id="btnNotas">Notas</button>
+    <button id="btnVersiculo">Capítulo</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlayNotas">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="modalTituloNotas"></span>
+      <button class="fechar" id="fecharNotas">&times;</button>
+    </div>
+    <textarea id="notasTexto" placeholder="Anotações, pontos pro discurso, referências cruzadas..."></textarea>
+    <button id="salvarNota">Salvar nota</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlayVerso">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="modalTituloVerso"></span>
+      <button class="fechar" id="fecharVerso">&times;</button>
+    </div>
+    <div id="breadcrumbVerso" style="font-size:12px; color:var(--muted); margin-bottom:10px; display:none;">
+      <button id="voltarCap" style="background:none; border:none; color:var(--amber); font-size:12px; cursor:pointer; padding:0;">&larr; Capítulos</button>
+    </div>
+    <div id="versoConteudo"></div>
+    <div id="listaFavoritos"></div>
+    <p class="aviso">Toque no capítulo e depois no versículo. Abre a página oficial do jw.org já no lugar certo — é necessário internet nesse momento.</p>
+  </div>
+</div>
+
+<script>
+var hebraico = [
+  ["Gên","Gênesis"],["Êx","Êxodo"],["Le","Levítico"],["Núm","Números"],["De","Deuteronômio"],["Jos","Josué"],["Jz","Juízes"],
+  ["Ru","Rute"],["1Sa","1 Samuel"],["2Sa","2 Samuel"],["1Rs","1 Reis"],["2Rs","2 Reis"],["1Cr","1 Crônicas"],["2Cr","2 Crônicas"],
+  ["Esd","Esdras"],["Ne","Neemias"],["Est","Ester"],["Jó","Jó"],["Sal","Salmos"],["Pr","Provérbios"],["Ec","Eclesiastes"],
+  ["Cân","Cântico de Cânticos"],["Is","Isaías"],["Je","Jeremias"],["La","Lamentações"],["Ez","Ezequiel"],["Da","Daniel"],["Os","Oseias"],
+  ["Jl","Joel"],["Am","Amós"],["Ob","Obadias"],["Jon","Jonas"],["Miq","Miqueias"],["Na","Naum"],["Hab","Habacuque"],
+  ["Sof","Sofonias"],["Ag","Ageu"],["Za","Zacarias"],["Mal","Malaquias"]
+];
+var gregas = [
+  ["Mt","Mateus"],["Mr","Marcos"],["Lu","Lucas"],["Jo","João"],["At","Atos"],["Ro","Romanos"],["1Co","1 Coríntios"],
+  ["2Co","2 Coríntios"],["Gál","Gálatas"],["Ef","Efésios"],["Fil","Filipenses"],["Col","Colossenses"],["1Te","1 Tessalonicenses"],["2Te","2 Tessalonicenses"],
+  ["1Ti","1 Timóteo"],["2Ti","2 Timóteo"],["Tit","Tito"],["Flm","Filêmon"],["He","Hebreus"],["Tg","Tiago"],["1Pe","1 Pedro"],
+  ["2Pe","2 Pedro"],["1Jo","1 João"],["2Jo","2 João"],["3Jo","3 João"],["Ju","Judas"],["Ap","Apocalipse"]
+];
+
+var infoLivros = {
+  "Gên":{n:1,cap:50,id3:"GEN"}, "Êx":{n:2,cap:40,id3:"EXO"}, "Le":{n:3,cap:27,id3:"LEV"}, "Núm":{n:4,cap:36,id3:"NUM"}, "De":{n:5,cap:34,id3:"DEU"}, "Jos":{n:6,cap:24,id3:"JOS"}, "Jz":{n:7,cap:21,id3:"JDG"},
+  "Ru":{n:8,cap:4,id3:"RUT"}, "1Sa":{n:9,cap:31,id3:"1SA"}, "2Sa":{n:10,cap:24,id3:"2SA"}, "1Rs":{n:11,cap:22,id3:"1KI"}, "2Rs":{n:12,cap:25,id3:"2KI"}, "1Cr":{n:13,cap:29,id3:"1CH"}, "2Cr":{n:14,cap:36,id3:"2CH"},
+  "Esd":{n:15,cap:10,id3:"EZR"}, "Ne":{n:16,cap:13,id3:"NEH"}, "Est":{n:17,cap:10,id3:"EST"}, "Jó":{n:18,cap:42,id3:"JOB"}, "Sal":{n:19,cap:150,id3:"PSA"}, "Pr":{n:20,cap:31,id3:"PRO"}, "Ec":{n:21,cap:12,id3:"ECC"},
+  "Cân":{n:22,cap:8,id3:"SNG"}, "Is":{n:23,cap:66,id3:"ISA"}, "Je":{n:24,cap:52,id3:"JER"}, "La":{n:25,cap:5,id3:"LAM"}, "Ez":{n:26,cap:48,id3:"EZK"}, "Da":{n:27,cap:12,id3:"DAN"}, "Os":{n:28,cap:14,id3:"HOS"},
+  "Jl":{n:29,cap:3,id3:"JOL"}, "Am":{n:30,cap:9,id3:"AMO"}, "Ob":{n:31,cap:1,id3:"OBA"}, "Jon":{n:32,cap:4,id3:"JON"}, "Miq":{n:33,cap:7,id3:"MIC"}, "Na":{n:34,cap:3,id3:"NAM"}, "Hab":{n:35,cap:3,id3:"HAB"},
+  "Sof":{n:36,cap:3,id3:"ZEP"}, "Ag":{n:37,cap:2,id3:"HAG"}, "Za":{n:38,cap:14,id3:"ZEC"}, "Mal":{n:39,cap:4,id3:"MAL"},
+  "Mt":{n:40,cap:28,id3:"MAT"}, "Mr":{n:41,cap:16,id3:"MRK"}, "Lu":{n:42,cap:24,id3:"LUK"}, "Jo":{n:43,cap:21,id3:"JHN"}, "At":{n:44,cap:28,id3:"ACT"}, "Ro":{n:45,cap:16,id3:"ROM"}, "1Co":{n:46,cap:16,id3:"1CO"},
+  "2Co":{n:47,cap:13,id3:"2CO"}, "Gál":{n:48,cap:6,id3:"GAL"}, "Ef":{n:49,cap:6,id3:"EPH"}, "Fil":{n:50,cap:4,id3:"PHP"}, "Col":{n:51,cap:4,id3:"COL"}, "1Te":{n:52,cap:5,id3:"1TH"}, "2Te":{n:53,cap:3,id3:"2TH"},
+  "1Ti":{n:54,cap:6,id3:"1TI"}, "2Ti":{n:55,cap:4,id3:"2TI"}, "Tit":{n:56,cap:3,id3:"TIT"}, "Flm":{n:57,cap:1,id3:"PHM"}, "He":{n:58,cap:13,id3:"HEB"}, "Tg":{n:59,cap:5,id3:"JAS"}, "1Pe":{n:60,cap:5,id3:"1PE"},
+  "2Pe":{n:61,cap:3,id3:"2PE"}, "1Jo":{n:62,cap:5,id3:"1JN"}, "2Jo":{n:63,cap:1,id3:"2JN"}, "3Jo":{n:64,cap:1,id3:"3JN"}, "Ju":{n:65,cap:1,id3:"JUD"}, "Ap":{n:66,cap:22,id3:"REV"}
+};
+
+function linkCapitulo(sigla, capitulo){
+  var info = infoLivros[sigla];
+  return "https://wol.jw.org/pt/wol/b/r5/lp-t/nwt/" + info.n + "/" + capitulo;
+}
+function linkVersiculo(sigla, capitulo, versiculo){
+  var info = infoLivros[sigla];
+  return linkCapitulo(sigla, capitulo) + "#v=" + info.n + ":" + capitulo + ":" + versiculo;
+}
+
+var STORAGE_KEY = "bibliaEstudoApp_v3";
+var estado = { lidos:{}, notas:{}, ultimoCap:{}, ajustesVersos:{} };
+
+function carregar(){
+  try{
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (raw){
+      var dados = JSON.parse(raw);
+      estado.notas = dados.notas || {};
+      estado.ultimoCap = dados.ultimoCap || {};
+      estado.lidos = dados.lidos || {};
+      estado.ajustesVersos = dados.ajustesVersos || {};
+    } else {
+      // migração de versões antigas: v2 marcava versículos em "favoritos"
+      var v2 = localStorage.getItem("bibliaEstudoApp_v2");
+      if (v2){
+        var antigo = JSON.parse(v2);
+        estado.notas = antigo.notas || {};
+        estado.ultimoCap = antigo.ultimoCap || {};
+        estado.lidos = antigo.favoritos || {};
+      }
+    }
+  }catch(e){}
+}
+function salvar(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); }catch(e){}
+}
+
+function montarGrade(lista, containerId){
+  var container = document.getElementById(containerId);
+  container.innerHTML = "";
+  for (var i=0;i<lista.length;i++){
+    var sigla = lista[i][0], nome = lista[i][1];
+    var div = document.createElement("div");
+    div.className = "book" + ((estado.lidos[sigla] && estado.lidos[sigla].length) ? " lido" : "");
+    div.setAttribute("data-sigla", sigla);
+    div.setAttribute("data-nome", nome);
+    div.innerHTML = sigla + '<span class="marca"></span>';
+    div.title = nome;
+    div.onclick = (function(sig, nm, el){ return function(){ abrirPainel(sig, nm, el); }; })(sigla, nome, div);
+    div.ondblclick = (function(sig, nm, el){ return function(){
+      painelAtual = { sigla: sig, nome: nm, el: el };
+      abrirModalVersiculo();
+    }; })(sigla, nome, div);
+    container.appendChild(div);
+  }
+}
+
+function atualizarProgresso(){
+  var hebLidos = 0, greLidos = 0;
+  hebraico.forEach(function(b){ hebLidos += (estado.lidos[b[0]] ? estado.lidos[b[0]].length : 0); });
+  gregas.forEach(function(b){ greLidos += (estado.lidos[b[0]] ? estado.lidos[b[0]].length : 0); });
+  var totalLidos = hebLidos + greLidos;
+  document.getElementById("numProgresso").textContent = totalLidos;
+  document.getElementById("progHeb").textContent = hebLidos;
+  document.getElementById("progGre").textContent = greLidos;
+  var pct = Math.min(totalLidos/500, 1);
+  var halo = document.getElementById('haloBiblia');
+  halo.style.setProperty('--halo-min', (0.12 + pct*0.28).toFixed(2));
+  halo.style.setProperty('--halo-max', (0.3 + pct*0.55).toFixed(2));
+  halo.style.opacity = (0.12 + pct*0.28).toFixed(2);
+}
+
+function atualizarContinuar(){
+  var chaves = Object.keys(estado.ultimoCap);
+  if (!chaves.length){ document.getElementById("continuar").classList.remove("ativo"); return; }
+  var ultima = chaves[chaves.length-1];
+  var dados = estado.ultimoCap[ultima];
+  var nomeLivro = "";
+  var todos = hebraico.concat(gregas);
+  for (var i=0;i<todos.length;i++) if (todos[i][0]===ultima) nomeLivro = todos[i][1];
+  document.getElementById("continuarNome").textContent = nomeLivro;
+  document.getElementById("continuarDetalhe").textContent = "capítulo " + dados.cap + (dados.verso ? ", versículo " + dados.verso : "");
+  document.getElementById("continuarLink").href = linkCapitulo(ultima, dados.cap);
+  document.getElementById("continuar").classList.add("ativo");
+}
+
+var painelAtual = null;
+
+function abrirPainel(sigla, nome, el){
+  painelAtual = { sigla: sigla, nome: nome, el: el };
+  document.getElementById('painelNome').textContent = nome;
+  var loc = estado.ultimoCap[sigla];
+  document.getElementById('painelLocal').textContent = loc
+    ? ("Capítulo " + loc.cap + (loc.verso ? " · Versículo " + loc.verso : ""))
+    : "Nenhum capítulo aberto ainda";
+  atualizarStatusPainel(sigla);
+  document.getElementById('painel').classList.add('ativo');
+}
+
+function atualizarStatusPainel(sigla){
+  var qtd = estado.lidos[sigla] ? estado.lidos[sigla].length : 0;
+  var statusEl = document.getElementById('painelStatus');
+  if (qtd > 0){
+    statusEl.textContent = "✓ " + qtd + (qtd === 1 ? " versículo lido" : " versículos lidos");
+    statusEl.className = "concluido";
+  } else {
+    statusEl.textContent = "Nenhum versículo lido ainda";
+    statusEl.className = "pendente";
+  }
+}
+
+function abrirModalVersiculo(){
+  document.getElementById('modalTituloVerso').textContent = painelAtual.nome;
+  mostrarGradeCapitulos();
+  renderizarLidos(painelAtual.sigla, painelAtual.nome);
+  document.getElementById('overlayVerso').classList.add('ativo');
+}
+document.getElementById('btnVersiculo').onclick = abrirModalVersiculo;
+
+function mostrarGradeCapitulos(){
+  var sigla = painelAtual.sigla;
+  var info = infoLivros[sigla];
+  var ultimo = estado.ultimoCap[sigla] ? estado.ultimoCap[sigla].cap : null;
+  document.getElementById('breadcrumbVerso').style.display = 'none';
+  var html = '<div id="capGrid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px;">';
+  for (var c=1;c<=info.cap;c++){
+    html += '<div class="cap capitulo' + (c===ultimo?' ultimo':'') + '" data-cap="' + c + '">' + c + '</div>';
+  }
+  html += '</div>';
+  document.getElementById('versoConteudo').innerHTML = html;
+  document.querySelectorAll('.capitulo').forEach(function(el){
+    el.onclick = function(){
+      mostrarGradeVersiculos(parseInt(this.getAttribute('data-cap'), 10));
+    };
+  });
+}
+
+function mostrarGradeVersiculos(capitulo){
+  var sigla = painelAtual.sigla, nome = painelAtual.nome;
+  document.getElementById('breadcrumbVerso').style.display = 'block';
+  var chaveAjuste = sigla + ':' + capitulo;
+  if (estado.ajustesVersos[chaveAjuste]){
+    renderizarGradeAjustavel(sigla, capitulo, estado.ajustesVersos[chaveAjuste]);
+  } else {
+    document.getElementById('versoConteudo').innerHTML = '<p class="aviso" style="margin-top:0;">Carregando versículos...</p>';
+    obterQtdVersiculos(sigla, capitulo, function(total){
+      renderizarGradeAjustavel(sigla, capitulo, total || 24);
+    });
+  }
+  document.getElementById('voltarCap').onclick = mostrarGradeCapitulos;
+}
+
+// Busca a quantidade de versículos do capítulo (dado numérico, guardado no aparelho depois da 1ª vez)
+function obterQtdVersiculos(sigla, capitulo, callback){
+  var chaveCache = 'qtdVersos:' + sigla + ':' + capitulo;
+  var emCache = null;
+  try{ emCache = localStorage.getItem(chaveCache); }catch(e){}
+  if (emCache){ callback(parseInt(emCache, 10)); return; }
+  var id3 = infoLivros[sigla].id3;
+  fetch('https://bible-api.com/data/web/' + id3 + '/' + capitulo)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      var total = (data.verses || []).length;
+      if (total){
+        try{ localStorage.setItem(chaveCache, String(total)); }catch(e){}
+        callback(total);
+      } else {
+        callback(null);
+      }
+    })
+    .catch(function(){ callback(null); });
+}
+
+function renderizarGradeAjustavel(sigla, capitulo, total){
+  var chaveAjuste = sigla + ':' + capitulo;
+  var lidosDesteCap = (estado.lidos[sigla] || []).filter(function(f){ return f.cap === capitulo; }).map(function(f){ return f.verso; });
+  var html = '<div style="display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:12px;">' +
+    '<button id="menosVerso" style="width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--amber); font-size:18px; font-weight:700; cursor:pointer;">－</button>' +
+    '<span style="font-size:13px; color:var(--muted);"><b style="color:var(--text); font-size:15px;">' + total + '</b> versículos</span>' +
+    '<button id="maisVerso" style="width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--amber); font-size:18px; font-weight:700; cursor:pointer;">＋</button>' +
+    '</div>';
+  html += '<div style="display:grid; grid-template-columns:repeat(7,1fr); gap:7px; max-height:34vh; overflow-y:auto; margin-bottom:12px;">';
+  for (var v=1; v<=total; v++){
+    var lido = lidosDesteCap.indexOf(v) > -1;
+    html += '<div class="cap versiculo' + (lido ? ' lido' : '') + '" data-verso="' + v + '">' + v + '</div>';
+  }
+  html += '</div>';
+  html += '<p class="aviso" style="margin-top:0;">Ajuste o + / － se o número não bater com a Bíblia no jw.org. Fica salvo pra esse capítulo.</p>';
+  document.getElementById('versoConteudo').innerHTML = html;
+  ligarToquesVersiculo(capitulo);
+  document.getElementById('menosVerso').onclick = function(){
+    if (total <= 1) return;
+    estado.ajustesVersos[chaveAjuste] = total - 1;
+    salvar();
+    renderizarGradeAjustavel(sigla, capitulo, total - 1);
+  };
+  document.getElementById('maisVerso').onclick = function(){
+    estado.ajustesVersos[chaveAjuste] = total + 1;
+    salvar();
+    renderizarGradeAjustavel(sigla, capitulo, total + 1);
+  };
+}
+
+function ligarToquesVersiculo(capitulo){
+  document.querySelectorAll('.versiculo').forEach(function(el){
+    el.onclick = function(){
+      var v = parseInt(this.getAttribute('data-verso'), 10);
+      if (this.classList.contains('lido')){
+        desmarcarVersiculo(capitulo, v);
+        this.classList.remove('lido');
+      } else {
+        marcarEAbrir(capitulo, v);
+        this.classList.add('lido');
+      }
+    };
+  });
+}
+
+function desmarcarVersiculo(capitulo, versiculo){
+  var sigla = painelAtual.sigla, nome = painelAtual.nome;
+  if (!estado.lidos[sigla]) return;
+  estado.lidos[sigla] = estado.lidos[sigla].filter(function(f){ return !(f.cap===capitulo && f.verso===versiculo); });
+  salvar();
+  renderizarLidos(sigla, nome);
+  atualizarStatusPainel(sigla);
+  atualizarProgresso();
+  var bookEl = document.querySelector('.book[data-sigla="' + sigla + '"]');
+  if (bookEl) bookEl.classList.toggle('lido', estado.lidos[sigla].length > 0);
+}
+
+function marcarEAbrir(capitulo, versiculo){
+  var sigla = painelAtual.sigla, nome = painelAtual.nome;
+  if (!estado.lidos[sigla]) estado.lidos[sigla] = [];
+  var jaExiste = estado.lidos[sigla].some(function(f){ return f.cap===capitulo && f.verso===versiculo; });
+  if (!jaExiste) estado.lidos[sigla].push({ cap: capitulo, verso: versiculo, quando: Date.now() });
+  estado.ultimoCap[sigla] = { cap: capitulo, verso: versiculo, quando: Date.now() };
+  salvar();
+  window.location.href = linkVersiculo(sigla, capitulo, versiculo);
+  renderizarLidos(sigla, nome);
+  atualizarStatusPainel(sigla);
+  atualizarProgresso();
+  var bookEl = document.querySelector('.book[data-sigla="' + sigla + '"]');
+  if (bookEl) bookEl.classList.add('lido');
+  document.getElementById('painelLocal').textContent = "Capítulo " + capitulo + " · Versículo " + versiculo;
+}
+
+function renderizarLidos(sigla, nome){
+  var lista = estado.lidos[sigla] || [];
+  var container = document.getElementById('listaFavoritos');
+  if (!lista.length){ container.innerHTML = ""; return; }
+  var html = '<h2 class="secao" style="margin-top:4px;">Versículos lidos</h2>';
+  lista.slice().reverse().forEach(function(f){
+    html += '<div style="display:flex; align-items:center; justify-content:space-between; background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px 12px; margin-bottom:8px;">' +
+      '<a href="' + linkVersiculo(sigla, f.cap, f.verso) + '" style="color:var(--amber); font-weight:600; font-size:14px; text-decoration:none;">' + nome + ' ' + f.cap + ':' + f.verso + '</a>' +
+      '<button data-cap="' + f.cap + '" data-verso="' + f.verso + '" class="removerFav" style="background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer;">&times;</button>' +
+      '</div>';
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.removerFav').forEach(function(btn){
+    btn.onclick = function(){
+      var cap = parseInt(this.getAttribute('data-cap'), 10);
+      var verso = parseInt(this.getAttribute('data-verso'), 10);
+      estado.lidos[sigla] = estado.lidos[sigla].filter(function(f){ return !(f.cap===cap && f.verso===verso); });
+      salvar();
+      renderizarLidos(sigla, nome);
+      atualizarStatusPainel(sigla);
+      atualizarProgresso();
+      var bookEl = document.querySelector('.book[data-sigla="' + sigla + '"]');
+      if (bookEl) bookEl.classList.toggle('lido', estado.lidos[sigla].length > 0);
+    };
+  });
+}
+
+document.getElementById('fecharVerso').onclick = function(){
+  document.getElementById('overlayVerso').classList.remove('ativo');
+  atualizarContinuar();
+};
+
+document.getElementById('btnNotas').onclick = function(){
+  if (!painelAtual) return;
+  var sigla = painelAtual.sigla, nome = painelAtual.nome;
+  document.getElementById('modalTituloNotas').textContent = "Notas — " + nome;
+  document.getElementById('notasTexto').value = estado.notas[sigla] || "";
+  document.getElementById('overlayNotas').classList.add('ativo');
+};
+document.getElementById('fecharNotas').onclick = function(){
+  document.getElementById('overlayNotas').classList.remove('ativo');
+};
+document.getElementById('salvarNota').onclick = function(){
+  if (!painelAtual) return;
+  estado.notas[painelAtual.sigla] = document.getElementById('notasTexto').value;
+  salvar();
+  document.getElementById('overlayNotas').classList.remove('ativo');
+};
+
+['overlayNotas','overlayVerso'].forEach(function(id){
+  document.getElementById(id).addEventListener('click', function(e){
+    if (e.target === this) this.classList.remove('ativo');
+  });
+});
+
+function semAcento(txt){
+  return txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+document.getElementById('busca').addEventListener('input', function(){
+  var termo = semAcento(this.value.toLowerCase().trim());
+  document.querySelectorAll('.book').forEach(function(el){
+    var sigla = semAcento(el.getAttribute('data-sigla').toLowerCase());
+    var nome = semAcento(el.getAttribute('data-nome').toLowerCase());
+    var mostra = !termo || sigla.indexOf(termo) > -1 || nome.indexOf(termo) > -1;
+    el.classList.toggle('oculto', !mostra);
+  });
+});
+
+document.getElementById('btnExportar').onclick = function(){
+  var blob = new Blob([JSON.stringify(estado)], {type:"application/json"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = "biblia-estudo-backup.json";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+document.getElementById('btnImportar').onclick = function(){
+  document.getElementById('arquivoImportar').click();
+};
+document.getElementById('arquivoImportar').onchange = function(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try{
+      var dados = JSON.parse(ev.target.result);
+      estado.lidos = dados.lidos || dados.favoritos || {};
+      estado.notas = dados.notas || {};
+      estado.ultimoCap = dados.ultimoCap || {};
+      estado.ajustesVersos = dados.ajustesVersos || {};
+      salvar();
+      montarGrade(hebraico, "grid1");
+      montarGrade(gregas, "grid2");
+      atualizarProgresso();
+      atualizarContinuar();
+    }catch(err){ alert("Arquivo inválido."); }
+  };
+  reader.readAsText(file);
+};
+
+carregar();
+montarGrade(hebraico, "grid1");
+montarGrade(gregas, "grid2");
+atualizarProgresso();
+atualizarContinuar();
+</script>
+</body>
+</html>
